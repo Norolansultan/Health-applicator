@@ -135,7 +135,6 @@
       font-family:var(--font-ui);
       font-size:13px;
       outline:none;
-      width:100%;
     }
     .field textarea{resize:none;min-height:72px;line-height:1.5}
     .field input:focus, .field select:focus, .field textarea:focus{
@@ -143,10 +142,16 @@
       box-shadow:0 0 0 4px rgba(97,227,199,.25)
     }
 
-    /* Week strip */
+    /* Notes Area */
+    .form-textarea { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:14px; font-size:13px; font-family:var(--font-ui); color:var(--text-1); background:var(--surface); outline:none; resize:none; min-height:68px; margin-top:2px; }
+    .form-textarea:focus { border-color:var(--mint); }
+    .ex-note-box { background:var(--surface-2); border:1.5px dashed var(--border); border-radius:var(--radius-md); padding:14px; margin-top:12px; margin-bottom:12px; }
+
+    /* Week strip & Navigation */
     .week-nav-wrap { display:flex; align-items:center; gap:4px; margin-top:10px; }
     .nav-arrow { background:var(--surface-2); border:1px solid var(--border); border-radius: 8px; font-size:16px; color:var(--text-2); cursor:pointer; padding:6px 8px; transition:all var(--transition); }
     .nav-arrow:hover { color:var(--primary); background:var(--mint-bg); border-color:var(--mint); }
+    
     .week-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;flex:1}
     .week-strip::-webkit-scrollbar{display:none}
     .day-chip{
@@ -262,8 +267,19 @@
     .train-sub{margin:0;color:var(--text-2);font-size:13px;line-height:1.55}
 
     .plan-editor{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-sm)}
-    /* Updated Editor Top for Mobile */
-    .editor-top{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+    .editor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .editor-top h3{margin:0;color:var(--text-1);font-size:14px}
+    .editor-top p{margin:4px 0 0;color:var(--text-3);font-size:12px;line-height:1.5}
+
+    .plan-edit-row{
+      display:grid;
+      grid-template-columns: 1fr 72px 72px;
+      gap:8px;
+      margin-top:10px;
+      align-items:end;
+    }
+    .plan-edit-row .field input, .plan-edit-row .field select{padding:10px 10px;border-radius:12px;font-size:12px}
+    .plan-edit-row .field label{font-size:10px}
 
     /* Session */
     #screen-session{padding:18px 16px 18px;gap:12px;background:var(--bg)}
@@ -386,15 +402,16 @@
   <section id="screen-dashboard" class="screen">
     <div class="hero">
       <h2>This week</h2>
-      <p id="dash-sub">Log your sets. Tap a date to see what was done.</p>
+      <p id="dash-sub">Plan your days, then log sets. Tap a weekday to see what’s planned and what’s done.</p>
       <div class="divider"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span class="badge" id="week-badge">View: —</span>
+        <span class="badge" id="leg-badge">Side: —</span>
+        <span class="badge" id="week-badge">Week: —</span>
       </div>
       <div class="week-nav-wrap">
-        <button class="nav-arrow" onclick="shiftDays(-2)">&#9664;</button>
+        <button class="nav-arrow" onclick="changeWeek(-7)">&#9664;</button>
         <div class="week-strip" id="dash-week"></div>
-        <button class="nav-arrow" onclick="shiftDays(2)">&#9654;</button>
+        <button class="nav-arrow" onclick="changeWeek(7)">&#9654;</button>
       </div>
     </div>
 
@@ -406,6 +423,15 @@
         </div>
         <button class="btn-ghost btn-mini" onclick="jumpToTrainSelected()">Edit plan</button>
       </div>
+
+      <div class="divider"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-weight:900;color:var(--text-1);font-size:13px">Planned</div>
+        <span class="badge" id="dash-planned-count">0</span>
+      </div>
+      <div class="plan-list" id="dash-planned"></div>
+      <div class="empty" id="dash-planned-empty" style="display:none">Nothing planned for this day. Add exercises in <b>Training</b>.</div>
 
       <div class="divider"></div>
 
@@ -445,15 +471,15 @@
     <div class="card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
         <div>
-          <div style="font-weight:900;color:var(--text-1)">Days</div>
+          <div style="font-weight:900;color:var(--text-1)">Weekdays</div>
           <div class="small" id="train-week-sub">Tap a day to plan or log for that date.</div>
         </div>
         <button class="btn-ghost btn-mini" onclick="selectToday()">Today</button>
       </div>
       <div class="week-nav-wrap">
-        <button class="nav-arrow" onclick="shiftDays(-2)">&#9664;</button>
+        <button class="nav-arrow" onclick="changeWeek(-7)">&#9664;</button>
         <div class="week-strip" id="train-week"></div>
-        <button class="nav-arrow" onclick="shiftDays(2)">&#9654;</button>
+        <button class="nav-arrow" onclick="changeWeek(7)">&#9654;</button>
       </div>
     </div>
 
@@ -463,7 +489,6 @@
           <h3 id="train-day-title">—</h3>
           <p id="train-day-sub">—</p>
         </div>
-        <button class="btn-ghost btn-mini" style="width:100%;padding:10px;color:var(--primary);border-color:var(--border)" onclick="beginSession(state.selectedDayKey, null)">▶ Free Session</button>
       </div>
 
       <div class="divider"></div>
@@ -479,23 +504,21 @@
       <div class="divider"></div>
 
       <div style="font-weight:900;color:var(--text-1);font-size:13px">Add exercise</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+      <div class="plan-edit-row">
         <div class="field">
           <label>Exercise (type to add new)</label>
           <input id="add-ex-name" type="text" list="exercise-datalist" placeholder="e.g., Leg press" />
           <datalist id="exercise-datalist"></datalist>
         </div>
-        <div style="display:flex;gap:8px;align-items:flex-end">
-          <div class="field" style="flex:1;margin-bottom:0">
-            <label>Type</label>
-            <select id="add-ex-type">
-              <option value="reps">Reps</option>
-              <option value="weight">Weight</option>
-              <option value="hr">Cardio / HR</option>
-            </select>
-          </div>
-          <button class="btn-primary btn-mini" style="flex:1;height:42px" onclick="addExerciseToPlan()">+ Add</button>
+        <div class="field">
+          <label>Type</label>
+          <select id="add-ex-type">
+            <option value="reps">Reps</option>
+            <option value="weight">Weight</option>
+            <option value="hr">Cardio / HR</option>
+          </select>
         </div>
+        <button class="btn-primary btn-mini" onclick="addExerciseToPlan()">+ Add</button>
       </div>
 
       <div style="margin-top:10px;color:var(--text-3);font-size:11px;line-height:1.5">
@@ -575,8 +598,8 @@
     <button class="btn-primary" onclick="logSet()">+ Log this set</button>
 
     <div class="ex-note-box">
-      <div style="font-weight:800;font-size:12px;color:var(--text-2);margin-bottom:6px">📝 Overall session note</div>
-      <textarea id="in-ex-note" class="form-textarea" placeholder="How did this session feel overall? Any specific observations?" rows="2"></textarea>
+      <div style="font-weight:800;font-size:12px;color:var(--text-2);margin-bottom:6px">📝 Overall exercise note</div>
+      <textarea id="in-ex-note" class="form-textarea" placeholder="How did this exercise feel overall? Any specific observations?" rows="2"></textarea>
     </div>
 
     <div class="card">
@@ -682,10 +705,10 @@
 const STORAGE_KEY = 'rehabflow_weekplan_v1';
 
 const MOODS = {
-  great:{label:'Great',score:4, emoji:'😄'},
-  good:{label:'Good',score:3, emoji:'🙂'},
-  ok:{label:'OK',score:2, emoji:'😐'},
-  hard:{label:'Hard',score:1, emoji:'😫'}
+  great:{label:'Great',score:4},
+  good:{label:'Good',score:3},
+  ok:{label:'OK',score:2},
+  hard:{label:'Hard',score:1}
 };
 
 const DEFAULT_CATALOG = [
@@ -702,7 +725,7 @@ const state = {
   catalog: [],
   plansByDay: {},
   logs: [],
-  viewCenterDateKey: null,
+  weekMondayKey: null,
   selectedDayKey: null,
 
   sessionActive: false,
@@ -753,13 +776,19 @@ function fromDayKey(dayKey){
   const [y,m,d] = dayKey.split('-').map(Number);
   return new Date(y, (m-1), d);
 }
-function weekDays(centerDate){
+function startOfWeekMonday(date){
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function weekDays(mondayDate){
   const days = [];
-  const start = new Date(centerDate);
-  start.setDate(start.getDate() - 2); 
-  for(let i=0;i<5;i++){
-    const dt = new Date(start);
-    dt.setDate(start.getDate()+i);
+  for(let i=0;i<7;i++){
+    const dt = new Date(mondayDate);
+    dt.setDate(mondayDate.getDate()+i);
     const key = toDayKey(dt);
     const dow = dt.toLocaleDateString(undefined, {weekday:'short'});
     const dom = dt.toLocaleDateString(undefined, {day:'numeric'});
@@ -855,15 +884,10 @@ function formatSet(entry){
   return `${entry.reps} reps`;
 }
 
-function shiftDays(offsetDays) {
-  const center = fromDayKey(state.viewCenterDateKey);
-  center.setDate(center.getDate() + offsetDays);
-  state.viewCenterDateKey = toDayKey(center);
-  
-  const selected = fromDayKey(state.selectedDayKey);
-  selected.setDate(selected.getDate() + offsetDays);
-  state.selectedDayKey = toDayKey(selected);
-
+function changeWeek(offsetDays) {
+  const monday = fromDayKey(state.weekMondayKey);
+  monday.setDate(monday.getDate() + offsetDays);
+  state.weekMondayKey = toDayKey(monday);
   renderDashboard();
   renderTrain();
 }
@@ -925,7 +949,8 @@ function launchApp(){
 }
 function selectToday(silent){
   const todayKey = toDayKey(new Date());
-  state.viewCenterDateKey = todayKey;
+  const monday = startOfWeekMonday(new Date());
+  state.weekMondayKey = toDayKey(monday);
   state.selectedDayKey = todayKey;
   if(!silent){
     renderDashboard();
@@ -943,8 +968,8 @@ function jumpToTrainSelected(){ switchTab('train'); }
 function renderWeekStrip(containerId){
   const el = document.getElementById(containerId);
   if(!el) return;
-  const center = fromDayKey(state.viewCenterDateKey);
-  const days = weekDays(center);
+  const monday = fromDayKey(state.weekMondayKey);
+  const days = weekDays(monday);
   el.innerHTML = '';
   days.forEach(d=>{
     const chip = document.createElement('div');
@@ -960,8 +985,7 @@ function renderWeekStrip(containerId){
       const scores = dayLogs.map(l => l.moodScore).filter(s => s);
       if (scores.length) {
         const avgScore = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
-        const moodObj = Object.values(MOODS).find(m => m.score === avgScore);
-        moodEmoji = moodObj ? moodObj.emoji : '';
+        moodEmoji = avgScore === 4 ? '😄' : avgScore === 3 ? '🙂' : avgScore === 2 ? '😐' : '😫';
       }
     }
 
@@ -997,11 +1021,11 @@ function getSymmetryHtml() {
 function renderDashboard(){
   if(!state.user) return;
 
-  const center = fromDayKey(state.viewCenterDateKey);
-  const startD = new Date(center); startD.setDate(startD.getDate() - 2);
-  const endD = new Date(center); endD.setDate(endD.getDate() + 2);
-  const rangeLabel = `${startD.toLocaleDateString(undefined,{month:'short',day:'numeric'})}–${endD.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
-  document.getElementById('week-badge').textContent = 'View: ' + rangeLabel;
+  document.getElementById('leg-badge').textContent = 'Side: ' + cap(state.user.leg);
+  const monday = fromDayKey(state.weekMondayKey);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+  const weekLabel = `${monday.toLocaleDateString(undefined,{month:'short',day:'numeric'})}–${sunday.toLocaleDateString(undefined,{month:'short',day:'numeric'})}`;
+  document.getElementById('week-badge').textContent = 'Week: ' + weekLabel;
 
   renderWeekStrip('dash-week');
 
@@ -1009,9 +1033,33 @@ function renderDashboard(){
   const dayKey = state.selectedDayKey;
   document.getElementById('dash-day-title').textContent = prettyDay(dayKey);
 
+  const planned = getPlan(dayKey).items || [];
   const dayLogs = logsForDay(dayKey);
 
   document.getElementById('dash-day-sub').textContent = computeUpcomingText();
+  document.getElementById('dash-planned-count').textContent = planned.length + ' planned';
+
+  const plannedWrap = document.getElementById('dash-planned');
+  plannedWrap.innerHTML = '';
+  if(!planned.length){
+    document.getElementById('dash-planned-empty').style.display = 'block';
+  } else {
+    document.getElementById('dash-planned-empty').style.display = 'none';
+    const byEx = groupLogsByExercise(dayLogs);
+    planned.forEach(item=>{
+      const ex = state.catalog.find(e=>e.id===item.exerciseId);
+      const targets = item.targets || {};
+      const doneSets = (byEx[item.exerciseId] || []).length;
+      const targetSets = Number(targets.sets || 0);
+      const prog = targetSets ? Math.min(1, doneSets/targetSets) : (doneSets?1:0);
+      const cls = prog>=1 ? 'done' : (prog>0 ? 'partial' : 'none');
+      const label = targetSets ? `${doneSets}/${targetSets} sets` : (doneSets? `${doneSets} sets` : 'Not started');
+      const node = document.createElement('div');
+      node.className = 'plan-item';
+      node.innerHTML = `<div class="left"><div class="name">${ex ? ex.name : 'Exercise'}</div><div class="meta">${describeTargets(item.type, targets)}</div></div><div class="right"><div class="progress-badge ${cls}">${label}</div></div>`;
+      plannedWrap.appendChild(node);
+    });
+  }
 
   const doneWrap = document.getElementById('dash-done');
   doneWrap.innerHTML = '';
@@ -1092,46 +1140,34 @@ function renderTrain(){
       const cls = prog>=1 ? 'done' : (prog>0 ? 'partial' : 'none');
       const node = document.createElement('div');
       node.className = 'plan-item';
-      
-      /* Mobile Responsive Inner HTML Structure */
-      node.style.flexDirection = 'column';
-      node.style.alignItems = 'stretch';
-      node.style.gap = '0';
       node.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
-          <div class="left" style="flex:1;">
-            <div class="name">${ex ? ex.name : 'Exercise'}</div>
-            <div class="meta">${describeTargets(item.type, targets)}</div>
-          </div>
-          <div class="right" style="align-items:flex-end; flex-shrink:0;">
-            <div class="progress-badge ${cls}">${targetSets ? `${doneSets}/${targetSets} sets` : (doneSets? `${doneSets} sets` : 'Not started')}</div>
-          </div>
-        </div>
-        
-        <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%;">
-          <div class="field">
-            <label>Sets</label>
-            <input type="number" min="0" value="${safeNum(targets.sets)}" data-pi="${item.id}" data-k="sets" oninput="onTargetEdit(event)" />
-          </div>
-          <div class="field">
-            <label>${item.type==='hr' ? 'Minutes' : 'Reps'}</label>
-            <input type="number" min="0" value="${item.type==='hr' ? safeNum(targets.minutes) : safeNum(targets.reps)}" data-pi="${item.id}" data-k="${item.type==='hr' ? 'minutes' : 'reps'}" oninput="onTargetEdit(event)" />
-          </div>
-          <div class="field" style="${item.type==='weight' ? '' : 'opacity:.35'}">
-            <label>Weight</label>
-            <input type="number" min="0" step="0.5" value="${safeNum(targets.weight)}" ${item.type==='weight' ? '' : 'disabled'} data-pi="${item.id}" data-k="weight" oninput="onTargetEdit(event)" />
-          </div>
-          <div class="field" style="${item.type==='hr' ? '' : 'opacity:.35'}">
-            <label>HR</label>
-            <input type="number" min="0" value="${safeNum(targets.hr)}" ${item.type==='hr' ? '' : 'disabled'} data-pi="${item.id}" data-k="hr" oninput="onTargetEdit(event)" />
+        <div class="left">
+          <div class="name">${ex ? ex.name : 'Exercise'}</div>
+          <div class="meta">${describeTargets(item.type, targets)}</div>
+          <div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <div class="field">
+              <label>Sets</label>
+              <input type="number" min="0" value="${safeNum(targets.sets)}" data-pi="${item.id}" data-k="sets" oninput="onTargetEdit(event)" />
+            </div>
+            <div class="field">
+              <label>${item.type==='hr' ? 'Minutes' : 'Reps'}</label>
+              <input type="number" min="0" value="${item.type==='hr' ? safeNum(targets.minutes) : safeNum(targets.reps)}" data-pi="${item.id}" data-k="${item.type==='hr' ? 'minutes' : 'reps'}" oninput="onTargetEdit(event)" />
+            </div>
+            <div class="field" style="${item.type==='weight' ? '' : 'display:none'}">
+              <label>Weight (kg)</label>
+              <input type="number" min="0" step="0.5" value="${safeNum(targets.weight)}" data-pi="${item.id}" data-k="weight" oninput="onTargetEdit(event)" />
+            </div>
+            <div class="field" style="${item.type==='hr' ? '' : 'display:none'}">
+              <label>Target BPM</label>
+              <input type="number" min="0" value="${safeNum(targets.hr)}" data-pi="${item.id}" data-k="hr" oninput="onTargetEdit(event)" />
+            </div>
           </div>
         </div>
-        
-        <div style="margin-top:12px; display:flex; gap:8px; width:100%;">
-          <button class="btn-primary btn-mini" style="flex:1; padding:10px" onclick="beginSession('${state.selectedDayKey}', '${item.id}')">▶ Start</button>
-          <button class="btn-ghost btn-mini btn-danger" style="flex:1; padding:10px" onclick="removePlanItemAndRender('${item.id}')">Remove</button>
-        </div>
-      `;
+        <div class="right">
+          <div class="progress-badge ${cls}">${targetSets ? `${doneSets}/${targetSets} sets` : (doneSets? `${doneSets} sets` : 'Not started')}</div>
+          <button class="btn-primary btn-mini" style="margin-top:4px" onclick="beginSession('${state.selectedDayKey}', '${item.id}')">▶ Start</button>
+          <button class="btn-ghost btn-mini btn-danger" style="margin-top:4px" onclick="removePlanItemAndRender('${item.id}')">Remove</button>
+        </div>`;
       wrap.appendChild(node);
     });
   }
@@ -1424,9 +1460,9 @@ function calcStreakDays(){
   renderExerciseDatalist();
 
   if(state.user){
-    const todayKey = toDayKey(new Date());
-    state.viewCenterDateKey = todayKey;
-    state.selectedDayKey = todayKey;
+    const monday = startOfWeekMonday(new Date());
+    state.weekMondayKey = toDayKey(monday);
+    state.selectedDayKey = toDayKey(new Date());
 
     document.getElementById('screen-onboard').style.display='none';
     document.getElementById('screen-onboard').classList.remove('active');
