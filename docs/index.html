@@ -135,6 +135,7 @@
       font-family:var(--font-ui);
       font-size:13px;
       outline:none;
+      width:100%;
     }
     .field textarea{resize:none;min-height:72px;line-height:1.5}
     .field input:focus, .field select:focus, .field textarea:focus{
@@ -142,16 +143,10 @@
       box-shadow:0 0 0 4px rgba(97,227,199,.25)
     }
 
-    /* Notes Area */
-    .form-textarea { width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:14px; font-size:13px; font-family:var(--font-ui); color:var(--text-1); background:var(--surface); outline:none; resize:none; min-height:68px; margin-top:2px; }
-    .form-textarea:focus { border-color:var(--mint); }
-    .ex-note-box { background:var(--surface-2); border:1.5px dashed var(--border); border-radius:var(--radius-md); padding:14px; margin-top:12px; margin-bottom:12px; }
-
-    /* Week strip & Navigation */
+    /* Week strip */
     .week-nav-wrap { display:flex; align-items:center; gap:4px; margin-top:10px; }
     .nav-arrow { background:var(--surface-2); border:1px solid var(--border); border-radius: 8px; font-size:16px; color:var(--text-2); cursor:pointer; padding:6px 8px; transition:all var(--transition); }
     .nav-arrow:hover { color:var(--primary); background:var(--mint-bg); border-color:var(--mint); }
-    
     .week-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none;flex:1}
     .week-strip::-webkit-scrollbar{display:none}
     .day-chip{
@@ -267,19 +262,8 @@
     .train-sub{margin:0;color:var(--text-2);font-size:13px;line-height:1.55}
 
     .plan-editor{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-sm)}
-    .editor-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-    .editor-top h3{margin:0;color:var(--text-1);font-size:14px}
-    .editor-top p{margin:4px 0 0;color:var(--text-3);font-size:12px;line-height:1.5}
-
-    .plan-edit-row{
-      display:grid;
-      grid-template-columns: 1fr 72px 72px;
-      gap:8px;
-      margin-top:10px;
-      align-items:end;
-    }
-    .plan-edit-row .field input, .plan-edit-row .field select{padding:10px 10px;border-radius:12px;font-size:12px}
-    .plan-edit-row .field label{font-size:10px}
+    /* Updated Editor Top for Mobile */
+    .editor-top{display:flex;flex-direction:column;align-items:stretch;gap:12px}
 
     /* Session */
     #screen-session{padding:18px 16px 18px;gap:12px;background:var(--bg)}
@@ -479,7 +463,7 @@
           <h3 id="train-day-title">—</h3>
           <p id="train-day-sub">—</p>
         </div>
-        <button class="btn-ghost btn-mini" style="width:auto;padding:8px 12px;color:var(--primary)" onclick="beginSession(state.selectedDayKey, null)">▶ Free Session</button>
+        <button class="btn-ghost btn-mini" style="width:100%;padding:10px;color:var(--primary);border-color:var(--border)" onclick="beginSession(state.selectedDayKey, null)">▶ Free Session</button>
       </div>
 
       <div class="divider"></div>
@@ -495,21 +479,23 @@
       <div class="divider"></div>
 
       <div style="font-weight:900;color:var(--text-1);font-size:13px">Add exercise</div>
-      <div class="plan-edit-row">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
         <div class="field">
           <label>Exercise (type to add new)</label>
           <input id="add-ex-name" type="text" list="exercise-datalist" placeholder="e.g., Leg press" />
           <datalist id="exercise-datalist"></datalist>
         </div>
-        <div class="field">
-          <label>Type</label>
-          <select id="add-ex-type">
-            <option value="reps">Reps</option>
-            <option value="weight">Weight</option>
-            <option value="hr">Cardio / HR</option>
-          </select>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div class="field" style="flex:1;margin-bottom:0">
+            <label>Type</label>
+            <select id="add-ex-type">
+              <option value="reps">Reps</option>
+              <option value="weight">Weight</option>
+              <option value="hr">Cardio / HR</option>
+            </select>
+          </div>
+          <button class="btn-primary btn-mini" style="flex:1;height:42px" onclick="addExerciseToPlan()">+ Add</button>
         </div>
-        <button class="btn-primary btn-mini" onclick="addExerciseToPlan()">+ Add</button>
       </div>
 
       <div style="margin-top:10px;color:var(--text-3);font-size:11px;line-height:1.5">
@@ -1106,34 +1092,46 @@ function renderTrain(){
       const cls = prog>=1 ? 'done' : (prog>0 ? 'partial' : 'none');
       const node = document.createElement('div');
       node.className = 'plan-item';
+      
+      /* Mobile Responsive Inner HTML Structure */
+      node.style.flexDirection = 'column';
+      node.style.alignItems = 'stretch';
+      node.style.gap = '0';
       node.innerHTML = `
-        <div class="left">
-          <div class="name">${ex ? ex.name : 'Exercise'}</div>
-          <div class="meta">${describeTargets(item.type, targets)}</div>
-          <div style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-            <div class="field">
-              <label>Sets</label>
-              <input type="number" min="0" value="${safeNum(targets.sets)}" data-pi="${item.id}" data-k="sets" oninput="onTargetEdit(event)" />
-            </div>
-            <div class="field">
-              <label>${item.type==='hr' ? 'Minutes' : 'Reps'}</label>
-              <input type="number" min="0" value="${item.type==='hr' ? safeNum(targets.minutes) : safeNum(targets.reps)}" data-pi="${item.id}" data-k="${item.type==='hr' ? 'minutes' : 'reps'}" oninput="onTargetEdit(event)" />
-            </div>
-            <div class="field" style="${item.type==='weight' ? '' : 'display:none'}">
-              <label>Weight (kg)</label>
-              <input type="number" min="0" step="0.5" value="${safeNum(targets.weight)}" data-pi="${item.id}" data-k="weight" oninput="onTargetEdit(event)" />
-            </div>
-            <div class="field" style="${item.type==='hr' ? '' : 'display:none'}">
-              <label>Target BPM</label>
-              <input type="number" min="0" value="${safeNum(targets.hr)}" data-pi="${item.id}" data-k="hr" oninput="onTargetEdit(event)" />
-            </div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; width:100%;">
+          <div class="left" style="flex:1;">
+            <div class="name">${ex ? ex.name : 'Exercise'}</div>
+            <div class="meta">${describeTargets(item.type, targets)}</div>
+          </div>
+          <div class="right" style="align-items:flex-end; flex-shrink:0;">
+            <div class="progress-badge ${cls}">${targetSets ? `${doneSets}/${targetSets} sets` : (doneSets? `${doneSets} sets` : 'Not started')}</div>
           </div>
         </div>
-        <div class="right">
-          <div class="progress-badge ${cls}">${targetSets ? `${doneSets}/${targetSets} sets` : (doneSets? `${doneSets} sets` : 'Not started')}</div>
-          <button class="btn-primary btn-mini" style="margin-top:4px" onclick="beginSession('${state.selectedDayKey}', '${item.id}')">▶ Start</button>
-          <button class="btn-ghost btn-mini btn-danger" style="margin-top:4px" onclick="removePlanItemAndRender('${item.id}')">Remove</button>
-        </div>`;
+        
+        <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%;">
+          <div class="field">
+            <label>Sets</label>
+            <input type="number" min="0" value="${safeNum(targets.sets)}" data-pi="${item.id}" data-k="sets" oninput="onTargetEdit(event)" />
+          </div>
+          <div class="field">
+            <label>${item.type==='hr' ? 'Minutes' : 'Reps'}</label>
+            <input type="number" min="0" value="${item.type==='hr' ? safeNum(targets.minutes) : safeNum(targets.reps)}" data-pi="${item.id}" data-k="${item.type==='hr' ? 'minutes' : 'reps'}" oninput="onTargetEdit(event)" />
+          </div>
+          <div class="field" style="${item.type==='weight' ? '' : 'opacity:.35'}">
+            <label>Weight</label>
+            <input type="number" min="0" step="0.5" value="${safeNum(targets.weight)}" ${item.type==='weight' ? '' : 'disabled'} data-pi="${item.id}" data-k="weight" oninput="onTargetEdit(event)" />
+          </div>
+          <div class="field" style="${item.type==='hr' ? '' : 'opacity:.35'}">
+            <label>HR</label>
+            <input type="number" min="0" value="${safeNum(targets.hr)}" ${item.type==='hr' ? '' : 'disabled'} data-pi="${item.id}" data-k="hr" oninput="onTargetEdit(event)" />
+          </div>
+        </div>
+        
+        <div style="margin-top:12px; display:flex; gap:8px; width:100%;">
+          <button class="btn-primary btn-mini" style="flex:1; padding:10px" onclick="beginSession('${state.selectedDayKey}', '${item.id}')">▶ Start</button>
+          <button class="btn-ghost btn-mini btn-danger" style="flex:1; padding:10px" onclick="removePlanItemAndRender('${item.id}')">Remove</button>
+        </div>
+      `;
       wrap.appendChild(node);
     });
   }
